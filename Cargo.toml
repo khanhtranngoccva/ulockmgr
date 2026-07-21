@@ -1,0 +1,28 @@
+[package]
+name = "ulockmgr"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1.0.103"
+clap = { version = "4.6.1", features = ["derive"] }
+crossbeam-channel = "0.5.16"
+dashmap = "6.2.1"
+log = "0.4.33"
+parking_lot = { version = "0.12.5", features = ["arc_lock", "send_guard"] }
+ref-cast = "1.0.25"
+# Low-level API (Rustix API is preferred)
+rustix = { version = "1.1.4", features = ["fs", "net", "process", "thread"] }
+# Signal handling functionalities
+nix = { version = "0.31.3", features = ["fs", "pthread", "signal"] }
+# API fallback in case nix does not support certain functionalities (sigaction checking)
+libc = "0.2.186"
+bincode = "1.3.3"
+serde = { version = "1.0.228", features = ["derive"] }
+env_logger = "0.11.11"
+crossbeam-utils = "0.8.22"
+
+[dev-dependencies]
+tempfile = "3.27.0"
+rstest = "0.26.1"
+test-log = "0.2.21"
