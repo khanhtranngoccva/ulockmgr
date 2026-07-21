@@ -2,6 +2,11 @@
 name = "ulockmgr"
 version = "0.1.0"
 edition = "2024"
+repository = "https://github.com/khanhtranngoccva/ulockmgr"
+description = "Passthrough file locking for FUSE"
+license = "MIT"
+keywords = ["fuse", "filesystem", "system", "bindings"]
+categories = ["external-ffi-bindings", "api-bindings", "filesystem", "os::unix-apis"]
 
 [dependencies]
 anyhow = "1.0.103"
