@@ -1,7 +1,7 @@
 //! Wrapper types for operating system locking
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[repr(i32)]
 pub enum LockAction {
     SetLockNonBlocking = libc::F_SETLK,
@@ -35,7 +35,7 @@ impl From<LockAction> for i32 {
     }
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[repr(i32)]
 pub enum LockType {
     Read = libc::F_RDLCK,
@@ -75,7 +75,7 @@ impl From<LockType> for i32 {
     }
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[repr(i32)]
 pub enum LockWhence {
     Start = libc::SEEK_SET,

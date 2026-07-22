@@ -645,8 +645,8 @@ impl Lockable {
     /// A callback will be invoked to inform the operation status.
     ///
     /// The pre-callback is used to register the interrupt handle in a FUSE unique ID to interrupt dispatcher map. Using the callback is preferred over using the returned handle, as this prevents the race condition case where the operation is finished, then the interrupt handle is added, causing a resource leak.
-    /// 
-    /// The post-callback is used to notify when a request ended, and should reply to original requests in FUSE types. It will always be invoked - whether the pre-callback failed or the operation failed or panicked. The user should generally save the request's unique ID here. 
+    ///
+    /// The post-callback is used to notify when a request ended, and should reply to original requests in FUSE types. It will always be invoked - whether the pre-callback failed or the operation failed or panicked. The user should generally save the request's unique ID here.
     ///
     /// To stop the locking, [`InterruptibleHandle::stop`] can be called on the handle. This causes the post-callback to emit [`io::ErrorKind::Interrupted`].
     pub fn set_lock_blocking_detached(
@@ -657,8 +657,8 @@ impl Lockable {
         done: impl FnOnce(Result<LockParams, io::Error>) + Send + 'static,
     ) -> Result<InterruptibleHandle, io::Error> {
         let cloned_raw = self.inner.clone();
+        let mut invoker = Invoker::new(done);
         tracker.spawn(move |handle| {
-            let mut invoker = Invoker::new(done);
             match pre(handle) {
                 Ok(_) => {}
                 Err(e) => {
