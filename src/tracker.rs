@@ -62,7 +62,7 @@ struct RawInterruptibleExitTracker {
 /// - The hosting thread is alive if this guard is in scope.
 /// - Only when this guard exits, the caller-supplied work has stopped, and the exit status is marked. If the exit status is unmarked, the object must be in scope.
 #[derive(Debug)]
-struct InterruptibleGuard {
+pub struct InterruptibleGuard {
     tracker: Arc<RawInterruptibleTracker>,
     exit: Arc<RawInterruptibleExitTracker>,
     _unsend: PhantomData<*mut c_void>,
@@ -246,5 +246,23 @@ impl InterruptibleTracker {
                 }
             }
         }
+    }
+
+    /// Creates a interruptible guard for the current thread and a handle that tries to stop the current thread.
+    pub fn guard(&self) -> Result<(InterruptibleGuard, InterruptibleHandle), io::Error> {
+        let exit = Arc::new(RawInterruptibleExitTracker {
+            condvar: Condvar::new(),
+            exited: Mutex::new(false),
+        });
+        let raw_tracker = self.raw.clone();
+        let exit_clone = exit.clone();
+        let guard = InterruptibleGuard::new(raw_tracker, exit_clone)?;
+        Ok((
+            guard,
+            InterruptibleHandle {
+                exit,
+                thread: nix::sys::pthread::pthread_self(),
+            },
+        ))
     }
 }

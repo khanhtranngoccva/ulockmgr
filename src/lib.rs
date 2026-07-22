@@ -1,6 +1,8 @@
-//! Library for implementing Linux passthrough file locking in FUSE.
+//! Library for implementing Linux passthrough file locking and interruption in FUSE.
 //!
 //! This is a rewrite of [ulockmgr](https://github.com/libfuse/libfuse/blob/fuse_2_9_bugfix/util/ulockmgr_server.c) with slightly different mechanisms. However, the architecture is practically the same - each lock owner ID will spawn a process which stores locked FDs.
+//!
+//! This crate also includes utilities for interrupting an in-progress operation.
 //!
 //! # Differences
 //! - The owner processes use TTLs. These processes exit if they are not in use.
@@ -161,6 +163,6 @@ pub mod server {
     use super::*;
 
     pub use communication::hydrate_forked_fd;
-    pub use owner_spawner::OwnerSpawner;
     pub use owner::DaemonOwner;
+    pub use owner_spawner::OwnerSpawner;
 }
