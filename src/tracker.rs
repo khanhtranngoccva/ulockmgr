@@ -106,6 +106,9 @@ impl InterruptibleHandle {
         let mut snooze_interrupt_done = false;
         let mut exit_guard = self.exit.exited.lock();
         while !*exit_guard {
+            if self.thread == nix::sys::pthread::pthread_self() {
+                panic!("reentrant deadlock detected");
+            }
             if backoff.is_completed() {
                 let _ = nix::sys::pthread::pthread_kill(self.thread, Signal::SIGUSR1);
                 self.exit

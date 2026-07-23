@@ -201,8 +201,11 @@ fn owner_receiving_loop(
                 Ping::create_reply(reply_fd).reply(Ok(()));
             }
             (Message::Interrupt(interrupt), reply_fd) => {
-                Interrupt::create_reply(reply_fd)
-                    .reply(io_cvt(handle_interrupt(&inner, interrupt)));
+                let inner = inner.clone();
+                std::thread::spawn(move || {
+                    Interrupt::create_reply(reply_fd)
+                        .reply(io_cvt(handle_interrupt(&inner, interrupt)));
+                });
             }
             (Message::RemoveInterrupt(interrupt), reply_fd) => {
                 RemoveInterrupt::create_reply(reply_fd)
@@ -213,10 +216,14 @@ fn owner_receiving_loop(
                     .reply(io_cvt(handle_fd_register(&inner, register)));
             }
             (Message::Unregister(unregister), reply_fd) => {
-                Unregister::create_reply(reply_fd)
-                    .reply(io_cvt(handle_fd_unregister(&inner, unregister)));
+                let inner = inner.clone();
+                std::thread::spawn(move || {
+                    Unregister::create_reply(reply_fd)
+                        .reply(io_cvt(handle_fd_unregister(&inner, unregister)))
+                });
             }
             (Message::LockCommand(lock_command), reply_fd) => {
+                let inner = inner.clone();
                 handle_lock_command(
                     inner.clone(),
                     lock_command,
@@ -597,14 +604,18 @@ impl RawLockable {
             ReplyLockCommandData::Done(params) => return Ok(params),
             ReplyLockCommandData::Pending(id) => Interruptable::new(self, id),
         };
+        let mut interrupted = false;
         loop {
             let next_item = {
-                // The interruption only has to deal within this syscall.
-                let _restore = helpers::unblock_signal(Signal::SIGUSR1)?;
+                // The interruption only has to deal within this syscall. When the lock is being aborted, there cannot be any interrupts.
+                let _restore = if !interrupted {
+                    Some(helpers::unblock_signal(Signal::SIGUSR1)?)
+                } else {
+                    None
+                };
                 iterator.next()
             };
             let _res = match next_item.ok_or_else(|| {
-                log::debug!("no next item");
                 io::Error::new(
                     io::ErrorKind::BrokenPipe,
                     "set_lock_blocking: connection is closed",
@@ -619,6 +630,7 @@ impl RawLockable {
                 }
                 // Outer interrupted signal. We must send the thread ID to the lock server, then continue waiting.
                 Err(e) if e.kind() == io::ErrorKind::Interrupted => {
+                    interrupted = true;
                     messages::send_request(
                         self.inner.communication.lock(),
                         Interrupt {
