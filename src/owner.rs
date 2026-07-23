@@ -405,6 +405,13 @@ fn set_lock_blocking(
     lock: LockParams,
     mut reply: ReplyLockCommand,
 ) {
+    let _restore = match helpers::block_all_signals() {
+        Ok(restore) => restore,
+        Err(e) => {
+            reply.reply(io_cvt(Err(e)));
+            return;
+        }
+    };
     let raw: libc::flock = lock.into();
     match nix::fcntl::fcntl(&fd_data.descriptor, FcntlArg::F_SETLK(&raw)).map_err(io::Error::from) {
         Ok(_) => {
