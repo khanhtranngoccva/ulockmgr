@@ -422,3 +422,49 @@ fn test_should_handle_lock_upgrade_blocking_on_read_conflict(
         .join()
         .expect("waiting thread should succeed");
 }
+
+#[test_log::test(rstest::rstest)]
+fn test_should_handle_non_overlapping_byte_ranges(
+    #[from(fixtures::lock_manager)] lock_manager: LockManager,
+) {
+    let temp_directory = tempfile::TempDir::new().expect("should create temp directory");
+    let test_path = temp_directory.path().join("test_lock_file");
+    let mut file1 = OpenOptions::new()
+        .create_new(true)
+        .read(true)
+        .write(true)
+        .open(&test_path)
+        .expect("should create test file");
+    file1
+        .write_all(b"Hello world!")
+        .expect("should write to file");
+    let file2 = OpenOptions::new()
+        .read(true)
+        .write(true)
+        .open(&test_path)
+        .expect("should open existing test file");
+    let lockable_1 = lock_manager
+        .register(1, &file1)
+        .expect("should register a file for locking");
+    let lockable_2 = lock_manager
+        .register(2, &file2)
+        .expect("should register a file for locking");
+    lockable_1
+        .set_lock_nonblocking(LockParams {
+            lock_type: LockType::Read,
+            whence: LockWhence::Start,
+            pid: 0,
+            start: 0,
+            len: 5,
+        })
+        .expect("should lock");
+    lockable_2
+        .set_lock_nonblocking(LockParams {
+            lock_type: LockType::Read,
+            whence: LockWhence::Start,
+            pid: 0,
+            start: 5,
+            len: 0,
+        })
+        .expect("should lock");
+}
