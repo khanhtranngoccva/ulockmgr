@@ -3,6 +3,7 @@ use std::{io, os::fd::OwnedFd};
 use parking_lot::Mutex;
 
 use crate::{
+    helpers,
     messages::{Reply, Replyable, RequestSpawnOwner, receive_request},
     processes::{self},
 };
@@ -21,6 +22,7 @@ impl OwnerSpawner {
     }
 
     pub fn run(self) -> Result<(), io::Error> {
+        let _restore = helpers::block_all_signals()?;
         loop {
             let (request, reply_oneshot): (RequestSpawnOwner, OwnedFd) =
                 match receive_request(self.communication.lock()) {

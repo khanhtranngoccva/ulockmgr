@@ -170,6 +170,8 @@ fn owner_receiving_loop(
     inner: Arc<DaemonOwnerInner>,
     ttl_sender: Sender<()>,
 ) -> Result<(), io::Error> {
+    // Only the filesystem daemon may signal to exit, and internal functions should not be interfered with unless they opt into it at specific cancellation points.
+    let _guard = helpers::block_all_signals()?;
     loop {
         let request: (Message, OwnedFd) =
             match messages::receive_request(inner.communication.lock()) {
@@ -532,6 +534,7 @@ where
 
 impl RawLockable {
     fn get_lock(&self, params: LockParams) -> Result<LockParams, io::Error> {
+        let _restore = helpers::block_all_signals()?;
         let res = messages::send_request(
             self.inner.communication.lock(),
             LockCommand {
@@ -550,6 +553,7 @@ impl RawLockable {
     }
 
     fn set_lock_nonblocking(&self, params: LockParams) -> Result<LockParams, io::Error> {
+        let _restore = helpers::block_all_signals()?;
         let res = messages::send_request(
             self.inner.communication.lock(),
             LockCommand {
@@ -568,6 +572,7 @@ impl RawLockable {
     }
 
     fn set_lock_blocking(&self, params: LockParams) -> Result<LockParams, io::Error> {
+        let _restore = helpers::block_all_signals()?;
         let mut iterator = messages::send_request_iter(
             self.inner.communication.lock(),
             LockCommand {
@@ -688,6 +693,7 @@ impl Owner {
     /// - This method does not manage owner regeneration in case the underlying owner process exits.
     /// - The method [`LockManager::register`](crate::LockManager::register) should be used instead.
     pub fn register(&self, fd: impl AsFd) -> Result<Lockable, io::Error> {
+        let _restore = helpers::block_all_signals()?;
         let cloned = fd.as_fd().try_clone_to_owned()?;
         let id = messages::send_request(self.inner.communication.lock(), Register { fd: cloned })??;
         Ok(Lockable {
@@ -700,6 +706,7 @@ impl Owner {
 
     /// Pings the client. If the client disconnects, [`io::ErrorKind::BrokenPipe`] is returned.
     pub fn ping(&self) -> Result<(), io::Error> {
+        let _restore = helpers::block_all_signals()?;
         messages::send_request(self.inner.communication.lock(), Ping {})??;
         Ok(())
     }

@@ -87,6 +87,7 @@ impl LockManager {
         ttl: Option<Duration>,
     ) -> Result<Arc<Owner>, io::Error> {
         // Lock order: owner lock -> communication lock
+        let _restore = helpers::block_all_signals()?;
         let mut new_owner = false;
         loop {
             let ttl = ttl.unwrap_or(self.ttl);
@@ -122,6 +123,7 @@ impl LockManager {
 
     /// Registers a file descriptor with the corresponding owner process for the selected owner ID. If the owner process is dead, it will be restarted.
     pub fn register(&self, owner_id: u64, fd: impl AsFd) -> Result<Lockable, io::Error> {
+        let _restore = helpers::block_all_signals()?;
         loop {
             let owner = self.get_or_create_owner(owner_id, None)?;
             match owner.register(fd.as_fd()) {
